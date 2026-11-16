@@ -70,7 +70,7 @@ the rest is that owner's business.
 A **provider** is whoever registers under a key and describes what it has:
 
 ```supercollider
-Mapper.register(\mine, provider);
+Mapper.register(\mine, ~provider);
 ```
 
 It answers `mapTargetAt(path)`, a description of one thing or nil, and `mapTargets`, the
@@ -78,7 +78,7 @@ descriptions of everything it has now. A description is an Event:
 
 ```supercollider
 (path: [\level], label: "my level", kind: \knob, spec: ControlSpec(0, 1),
- get: { level }, set: { |v| level = v }, group: "my module")
+ get: { ~level }, set: { |v| ~level = v }, group: "my module")
 ```
 
 `kind` is `\knob`, `\toggle` (on/off), `\trigger` (it fires) or `\menu` (the index of an item).

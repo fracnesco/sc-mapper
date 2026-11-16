@@ -9,14 +9,7 @@ code::[\units, name, key]::. A thing qualifies when its class answers code::mapP
 of code::(key:, label:, kind:, spec:, section:):: - and it answers code::mapGet(key):: and
 code::mapSet(key, value)::. Every effect built on sc-eq's FxUnit does.
 
-code::
-~unit = (class: (mapParams: { [(key: \amount, label: "amount", spec: ControlSpec(0, 1))] },
-	mapParam: { |self, key| self.mapParams.detect { |e| e[\key] == key } }),
-	amount: 0.5, mapGet: { |self, key| self[key] }, mapSet: { |self, key, v| self[key] = v });
-Mapper.units.units.size;
-::
-
-With sc-eq installed:
+With sc-eq installed, the master chain's eq:
 
 code::
 Mapper.units.put(\masterEq, \FxChain.asClass.master.eq);
