@@ -475,7 +475,7 @@ Mapper {
 	// x as you would type it: \\kn_1_1, [\\fader, 0], 0.25
 	*codeOf { |x|
 		^case
-		{ x.isKindOf(Symbol) and: { "^[a-z_][a-zA-Z0-9_]*$".matchRegexp(x.asString) } } { "\\" ++ x }
+		{ x.isKindOf(Symbol) and: { "^[A-Za-z_][a-zA-Z0-9_]*$".matchRegexp(x.asString) } } { "\\" ++ x }
 		{ x.isKindOf(Symbol) } { x.asCompileString }
 		{ x.isFloat } { x.round(0.0001).asString }
 		{ x.isArray and: { x.isString.not } } { "[" ++ x.collect { |y| this.codeOf(y) }.join(", ") ++ "]" }
