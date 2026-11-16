@@ -9,9 +9,16 @@ Mapper.default.gui;
 Mapper.default.gui.select([\tidal, \cut]);
 ::
 
-On the left, everything that can be mapped now, provider by provider and group by group,
-narrowed by the menu and by what is typed in the field; a star marks the mapped ones. Pick a row
-and it is on show on the right.
+On the left, everything that can be mapped now, as a tree: a provider (a mixer, a module, a
+set of effects), its groups, the targets in each. A provider starts open, a group folded; click
+a heading to open or fold it, strong::+:: and strong::-:: do them all. The menu and the field
+narrow the tree, and typing opens everything that matches. A dot marks the mapped targets, and
+a heading counts them. Pointing at a row says in the hint bar what it is - a target's kind, its
+range, where it is now, its address and what is mapped to it; a provider may add a line of its
+own (a code::hint:: in the description it gives, see link::Classes/MapperTarget::). Pick a
+target and it is on show on the right; a target selected from elsewhere is brought into view.
+The strong::targets:: button folds the whole panel away - it is only needed to pick a target
+by name.
 
 On the right, the controllers: strong::find:: lists the devices plugged in, strong::connect::
 listens to one under a name, strong::forget:: lets it go with its mappings. Then the mappings,
@@ -35,7 +42,26 @@ a link::Classes/Mapper::. link::Classes/Mapper#-gui:: is the usual way in.
 METHOD:: windowBounds
 Where it opens; remembered when it closes.
 
+METHOD:: showTargets
+Whether the panel of targets is on show. The window sets it; set it before opening one to
+start folded.
+
+METHOD:: treeOpen
+Which headings of the tree are open, by their path ("AdaptiveTextures/tex/loop"). Kept between
+windows.
+
+METHOD:: treeRowHeight
+METHOD:: panelWidth
+The height of a row of the tree and the width of its panel, in points.
+
+METHOD:: shortLabel
+A target's label without the words the headings above it already say.
+
 INSTANCEMETHODS::
+
+METHOD:: treeRows
+The rows of the tree on show, top to bottom: Events with code::kind:: (code::\folder:: or
+code::\leaf::), code::label::, code::depth::, and for a target its code::address::.
 
 METHOD:: select
 Put a target on show, with its mapping if it has one. From any thread.

@@ -20,6 +20,7 @@
 //   trigger  what a \trigger does; without it, set(1)
 //   range    where a new mapping's lo and hi start, if not the whole spec
 //   owner    something else that moves it (a macro): it cannot be mapped
+//   hint     a line about what it does, for the mapper window's hint bar
 //
 // A provider that is not there, or that answers nil for the path, makes a
 // target that does not exist: setting it does nothing, and a mapping to it

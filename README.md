@@ -122,8 +122,12 @@ element**: mapping a target again replaces the mapping it had.
 
 ## The window
 
-`Mapper.default.gui`. On the left, every target there is, provider by provider, narrowed by the
-menu and by what you type; a star marks the mapped ones. On the right, the controllers (**find**,
+`Mapper.default.gui`. On the left, every target there is, as a tree: a provider, its groups, the
+targets in each. Click a heading to fold or open it (**+** and **-** do them all), type to
+narrow it - what matches is opened. A dot marks the mapped ones and a heading counts them.
+Point at a row and the hint bar says what it is: its kind, its range, where it is now, its
+address, what is mapped to it. The **targets** button folds the whole panel away, and the
+window remembers that. On the right, the controllers (**find**,
 **connect**, **forget**), then the mappings by control, so the targets of one knob sit together,
 and under them the one on show: its range, takeover, button mode and curve.
 

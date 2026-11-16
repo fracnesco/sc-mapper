@@ -4,10 +4,15 @@
 //   Mapper.default.gui;                          // or the midi button of any module's window
 //   Mapper.default.gui.select([\sdg, \fader, 0]);   // with one target on show
 //
-// On the left, everything that can be mapped now: every provider's targets,
-// group by group, narrowed by the menu and by what is typed in the field. A
-// star marks the mapped ones. Pick a row and it is the one on show on the
-// right, with its mapping if it has one.
+// On the left, everything that can be mapped now, as a tree: a provider (a
+// mixer, a module, a set of effects), its groups, the targets in each. Click
+// a heading to fold it or open it, + and - open and fold them all; the menu
+// and the field narrow what is listed, and typing opens everything that
+// matches. A dot marks the mapped ones, and a heading counts them. Pointing at
+// a row says in the hint bar what it is: its kind, its range, where it is now,
+// its address, and what is mapped to it. Pick a target and it is the one on
+// show on the right, with its mapping if it has one. The targets button
+// folds the whole panel away.
 //
 // At the top right, the controllers: find runs Modality's MKtl.find (midi, or
 // midi and hid) and lists every device seen, with its description and whether
@@ -35,6 +40,10 @@
 
 MapperWindow {
 	classvar <>windowBounds;
+	classvar <>showTargets = true;	// whether the panel of targets is on show
+	classvar <treeOpen;				// which headings of the tree are open, by their path
+	classvar <>treeRowHeight = 18, <>panelWidth = 300;
+	classvar unfoldedWidth;			// how wide the window was when the panel was folded away
 	classvar <menuCurves;		// the curve menu: its items, and the curve each one stands for
 	classvar <colBg, <colText, <colDim, <colAccent, <colWarn, <colWave, <colWaveBg, <colHandle;
 
@@ -47,10 +56,12 @@ MapperWindow {
 	var <deviceRows, deviceList, deviceKey, findBtn, protoMenu, nameField, descMenu, connectBtn, forgetBtn;
 	var learnModeBtn, followCheck, <>follow = true;	// follow: a mapping moved on the controller comes on show
 	var refreshPending = false, readoutPending = false, editing = false, filling = false;
-	var providerMenu, filterField, browser, <browserRows, browserInfo;
+	var providerMenu, filterField, <browser, <browserRows, browserInfo;
+	var <treeRows, treeScroll = 0, lastRevealed, browserPanel, targetsBtn, forceOpen = false;
 	var font, smallFont, monoFont;
 
 	*initClass {
+		treeOpen = Dictionary.new;
 		colBg = Color(0.13, 0.13, 0.15);
 		colText = Color(0.86, 0.87, 0.89);
 		colDim = Color(0.55, 0.56, 0.62);
@@ -222,20 +233,25 @@ MapperWindow {
 
 		addPointRow = HLayout(label.("curve"), curveMenu, label.("bend"), bendBox, nil, addPointBtn, removePointBtn).spacing_(4);
 		this.prBuildBrowser;
-		window.layout = VLayout(HLayout(
-		VLayout(
-			HLayout(heading.("targets"), nil, providerMenu).spacing_(4),
+		browserPanel = View().fixedWidth_(panelWidth).layout_(VLayout(
+			HLayout(heading.("targets"), nil, providerMenu,
+				this.prTreeButton("+", { this.prSetAllOpen(true) }, "open every heading of the tree"),
+				this.prTreeButton("-", { this.prSetAllOpen(false) }, "fold the tree down to its providers")
+			).spacing_(4),
 			filterField,
 			[browser, stretch: 1],
 			browserInfo
-		).spacing_(6),
+		).margins_(0).spacing_(6));
+		browserPanel.visible = showTargets;
+		window.layout = VLayout(HLayout(
+		browserPanel,
 		[VLayout(
 			HLayout(heading.("controllers"), nil, protoMenu, findBtn).spacing_(4),
 			deviceList,
 			HLayout(label.("name"), nameField, label.("description"), [descMenu, stretch: 1], connectBtn, forgetBtn).spacing_(4),
 			ktlText,
 			8,
-			HLayout(heading.("mappings"), 10, learnModeBtn, 10, followCheck, nil, codeBtn).spacing_(4),
+			HLayout(heading.("mappings"), 10, learnModeBtn, 10, followCheck, nil, targetsBtn, codeBtn).spacing_(4),
 			[listView, stretch: 1],
 			HLayout([titleText, stretch: 1], learnBtn, removeBtn, 12, tidalField, tidalBtn).spacing_(4),
 			HLayout(
@@ -264,32 +280,88 @@ MapperWindow {
 
 	// ------------------------------------------------------------- the browser
 
-	// Everything that can be mapped, provider by provider and group by group,
-	// with what each is mapped to. A row picked here is the one on show on the
-	// right; learn there maps it.
+	// Everything that can be mapped, as a tree: provider, group, target. A
+	// target picked here is the one on show on the right; learn there maps it.
 	prBuildBrowser {
-		var c = this.class;
-		providerMenu = PopUpMenu().font_(font).fixedWidth_(150)
-			.action_({ if (filling.not) { this.prFillBrowser } });
-		hints.attach(providerMenu, "whose targets the list shows: everything, or one mixer, module or set of effects");
-		filterField = TextField().font_(font).fixedWidth_(300);
-		filterField.action = { this.prFillBrowser };
-		filterField.keyUpAction = { this.prFillBrowser };
-		hints.attach(filterField, "type to narrow the list: part of a name (fader, drive, orbit 2)");
-		browser = ListView().font_(monoFont).fixedWidth_(300).background_(Color.grey(0.12))
-			.stringColor_(c.colText).selectedStringColor_(Color.black).hiliteColor_(c.colAccent);
-		browser.action = { |v|
-			if (filling.not) { browserRows !? { |rows| v.value !? { |i| rows[i] } !? { |address| this.select(address) } } }
+		var c = this.class, grey = Color.grey(0.26);
+		providerMenu = PopUpMenu().font_(font).fixedWidth_(130)
+			.action_({ if (filling.not) { treeScroll = 0; this.prFillBrowser } });
+		hints.attach(providerMenu, "whose targets the tree shows: everything, or one mixer, module or set of effects");
+		filterField = TextField().font_(font);
+		filterField.action = { treeScroll = 0; this.prFillBrowser };
+		filterField.keyUpAction = { treeScroll = 0; this.prFillBrowser };
+		hints.attach(filterField, "type to narrow the tree: part of a name (fader, drive, orbit 2) - what matches is opened");
+		browser = UserView().background_(Color.grey(0.12));
+		browser.drawFunc = { |v| this.prDrawTree(v) };
+		browser.mouseDownAction = { |v, x, y| this.prTreeClick(v, y); true };
+		browser.mouseWheelAction = { |v, x, y, mod, xd, yd|
+			treeScroll = treeScroll - (yd * 6);
+			v.refresh;
+			true
 		};
-		hints.attach(browser, "everything that can be mapped now - pick one, then learn on the right; * is mapped already");
+		hints.attach(browser, { |v, x, y| this.prTreeHint(y) });
 		browserInfo = StaticText().font_(smallFont).stringColor_(c.colDim);
+		targetsBtn = Button().font_(font).fixedWidth_(64).states_([
+			["targets", c.colText, grey], ["targets", Color.black, c.colAccent]
+		]).value_(showTargets.binaryValue).action_({ |b| this.prShowTargets(b.value == 1) });
+		hints.attach(targetsBtn, "show or fold away the tree of everything that can be mapped - it is only needed to pick a target by name");
 	}
 
-	// the lines, and for each the address it stands for (nil on a heading)
+	prTreeButton { |str, func, hint|
+		var b = Button().font_(font).fixedSize_(Size(22, 20))
+			.states_([[str, this.class.colText, Color.grey(0.26)]]).action_({ func.value });
+		hints.attach(b, hint);
+		^b
+	}
+
+	// The panel folds away to the left: the window gives up its width, and the
+	// rest stays where it is on the screen.
+	prShowTargets { |bool|
+		var b = window.bounds, step = panelWidth + 12, right = b.left + b.width, want;
+		if (bool == showTargets) { ^this };
+		showTargets = bool;
+		browserPanel.visible = bool;
+		// as wide as it was before the panel went - or, going, that much narrower
+		want = if (bool) { unfoldedWidth ? (b.width + step) } { unfoldedWidth = b.width; (b.width - step).max(400) };
+		if (bool) { this.prFillBrowser };
+		// The layout has its own say about the width (the rest of the window has
+		// a least one, and showing a panel grows the window at once), so the
+		// width is asked for once that has settled, and the right edge is then
+		// put back where it was.
+		{
+			if (this.isOpen) {
+				window.bounds = Rect(right - want, b.top, want, b.height);
+				{
+					if (this.isOpen) {
+						var now = window.bounds;
+						window.bounds = Rect(right - now.width, now.top, now.width, now.height);
+					};
+				}.defer(0.1);
+			};
+		}.defer(0.05);
+	}
+
+	// every heading open, or only the providers showing
+	prSetAllOpen { |bool|
+		treeOpen.clear;
+		forceOpen = bool;
+		this.prFillBrowser;		// with forceOpen, every heading met is recorded as open
+		forceOpen = false;
+		if (bool.not) {
+			// a provider is open unless said otherwise: say otherwise
+			treeRows.do { |row| if (row[\kind] == \folder) { treeOpen[row[\id]] = false } };
+			this.prFillBrowser;
+		};
+	}
+
+	// The tree, and from it the rows on show: a heading, then - when it is
+	// open - its targets and the headings under it. A provider starts open, a
+	// group folded; a filter opens everything that is left.
 	prFillBrowser {
-		var want = providerMenu.value ? 0, keys, lines = List.new, rows = List.new, words, count = 0, k, lastGroup;
+		var want = providerMenu.value ? 0, keys, rows = List.new, words, count = 0, k, walk, reveal;
 		var names = mapper.providers.keys.asArray.sort.reject { |x| x == \tidal };
 		var mapped = mapper.maps.collect { |m| m.target.address }.asArray;
+		var roots = List.new, filtering;
 		if (this.isOpen.not) { ^this };
 		filling = true;
 		protect {
@@ -300,33 +372,183 @@ MapperWindow {
 		} { filling = false };
 		keys = if (providerMenu.value == 0) { names } { [names[providerMenu.value - 1]] };
 		words = filterField.string.toLower.split($ ).reject(_.isEmpty);
+		filtering = words.notEmpty;
+		// the one on show is brought into view once, when it changes
+		reveal = selectedAddress.notNil and: { selectedAddress != lastRevealed };
+
 		keys.do { |key|
 			var p = mapper.providers[key];
 			var list = try { p.mapTargets } ? [];
+			var root = (kind: \folder, label: (p.tryPerform(\mapLabel) ? key).asString, id: key.asString,
+				depth: 0, folders: List.new, index: Dictionary.new, leaves: List.new, count: 0, mapped: 0);
 			list = list.select { |d|
 				var text = ((d[\group] ? "").asString + (d[\label] ? "").asString).toLower;
 				words.every { |w| text.contains(w) }
 			};
-			if (list.notEmpty) {
-				lines.add((p.tryPerform(\mapLabel) ? key).asString); rows.add(nil);
-				lastGroup = nil;
-				list.do { |d|
-					var address = [key] ++ d[\path].asArray, group = (d[\group] ? "").asString;
-					if (group != lastGroup) { lines.add("  " ++ group); rows.add(nil); lastGroup = group };
-					lines.add("   % %".format(if (mapped.includesEqual(address)) { "*" } { " " }, d[\label]));
-					rows.add(address);
-					count = count + 1;
+			list.do { |d|
+				var address = [key] ++ d[\path].asArray, isMapped = mapped.includesEqual(address);
+				var node = root, trail = List[root];
+				(d[\group] ? "").asString.split($/).reject(_.isEmpty).do { |seg|
+					var child = node[\index][seg];
+					if (child.isNil) {
+						child = (kind: \folder, label: seg, id: node[\id] ++ "/" ++ seg, depth: node[\depth] + 1,
+							folders: List.new, index: Dictionary.new, leaves: List.new, count: 0, mapped: 0);
+						node[\index][seg] = child;
+						node[\folders].add(child);
+					};
+					node = child;
+					trail.add(node);
+				};
+				node[\leaves].add((kind: \leaf, depth: node[\depth] + 1, address: address, isMapped: isMapped, desc: d,
+					full: (d[\label] ? address.last).asString,
+					label: this.class.shortLabel((d[\label] ? address.last).asString, trail.collect { |n| n[\label] })));
+				trail.do { |n|
+					n[\count] = n[\count] + 1;
+					if (isMapped) { n[\mapped] = n[\mapped] + 1 };
+					if (reveal and: { address == selectedAddress }) { treeOpen[n[\id]] = true };
+				};
+				count = count + 1;
+			};
+			if (list.notEmpty) { roots.add(root) };
+		};
+
+		walk = { |node|
+			var open = filtering or: { forceOpen } or: { treeOpen[node[\id]] ? (node[\depth] == 0) };
+			if (forceOpen) { treeOpen[node[\id]] = true };
+			node[\open] = open;
+			rows.add(node);
+			if (open) {
+				node[\leaves].do { |leaf| rows.add(leaf) };
+				node[\folders].do { |child| walk.(child) };
+			};
+		};
+		roots.do { |root| walk.(root) };
+
+		treeRows = rows.asArray;
+		browserRows = treeRows.collect { |row| row[\address] };
+		if (reveal) {
+			k = browserRows.detectIndex { |a| a == selectedAddress };
+			k !? {
+				var y = k * treeRowHeight, h = browser.bounds.height;
+				if (y < treeScroll or: { (y + treeRowHeight) > (treeScroll + h) }) {
+					treeScroll = y - (h / 2) + treeRowHeight;
+				};
+				lastRevealed = selectedAddress;
+			};
+		};
+		browser.refresh;
+		browserInfo.string = "% targets, % mapped".format(count, mapped.size);
+	}
+
+	// "tex hold spawn" under tex / transport is "hold spawn": the words a
+	// heading above it already says are dropped from the front of a label
+	*shortLabel { |label, headings|
+		var out = label, again = true;
+		while { again } {
+			again = false;
+			headings.do { |h|
+				if (out.size > (h.size + 1) and: { out.toLower.beginsWith(h.toLower ++ " ") }) {
+					out = out.drop(h.size + 1);
+					again = true;
 				};
 			};
 		};
-		browserRows = rows.asArray;
-		k = browserRows.detectIndex { |a| a == selectedAddress };
-		filling = true;
-		protect {
-			browser.items = if (lines.isEmpty) { ["nothing to map here yet"] } { lines.asArray };
-			browser.value = k;
-		} { filling = false };
-		browserInfo.string = "% targets, % mapped".format(count, mapped.size);
+		^out
+	}
+
+	prClampTreeScroll { |v|
+		treeScroll = treeScroll.clip(0, (((treeRows ? []).size * treeRowHeight) - v.bounds.height).max(0));
+	}
+
+	prDrawTree { |v|
+		var c = this.class, b = v.bounds, w = b.width, h = b.height, rh = treeRowHeight;
+		var rows = treeRows ? [], total = rows.size * rh, first, last;
+		this.prClampTreeScroll(v);
+		if (rows.isEmpty) {
+			^Pen.stringCenteredIn("nothing to map here yet", Rect(0, 0, w, 40), font, c.colDim)
+		};
+		first = (treeScroll / rh).floor.asInteger;
+		last = ((treeScroll + h) / rh).ceil.asInteger.min(rows.size - 1);
+		(first .. last).do { |i|
+			var row = rows[i], y = (i * rh) - treeScroll, x = 6 + (row[\depth] * 12);
+			if (row[\kind] == \folder) {
+				var cx = x + 4, cy = y + (rh / 2), note;
+				Pen.fillColor = c.colDim;
+				if (row[\open]) {
+					Pen.moveTo((cx - 4) @ (cy - 2)); Pen.lineTo((cx + 4) @ (cy - 2)); Pen.lineTo(cx @ (cy + 3));
+				} {
+					Pen.moveTo((cx - 2) @ (cy - 4)); Pen.lineTo((cx + 3) @ cy); Pen.lineTo((cx - 2) @ (cy + 4));
+				};
+				Pen.fill;
+				note = if (row[\mapped] > 0) { "% of %".format(row[\mapped], row[\count]) } { row[\count].asString };
+				Pen.stringLeftJustIn(row[\label], Rect(x + 14, y, w - x - 70, rh),
+					if (row[\depth] == 0) { Font(Font.defaultSansFace, 11, true) } { font }, c.colText);
+				Pen.stringRightJustIn(note, Rect(w - 70, y, 58, rh), smallFont,
+					if (row[\mapped] > 0) { c.colAccent } { c.colDim });
+			} {
+				var sel = row[\address] == selectedAddress;
+				if (sel) {
+					Pen.fillColor = c.colAccent; Pen.fillRect(Rect(0, y, w - 8, rh));
+				};
+				if (row[\isMapped]) {
+					Pen.fillColor = if (sel) { Color.black } { c.colAccent };
+					Pen.fillOval(Rect(x + 1, y + (rh / 2) - 3, 6, 6));
+				};
+				Pen.stringLeftJustIn(row[\label], Rect(x + 14, y, w - x - 26, rh), font,
+					if (sel) { Color.black } { if (row[\isMapped]) { c.colText } { c.colText.blend(c.colDim, 0.35) } });
+			};
+		};
+		// where in the list the view is
+		if (total > h) {
+			Pen.fillColor = Color.grey(0.3);
+			Pen.addRoundedRect(Rect(w - 6, (treeScroll / total) * h, 4, ((h / total) * h).max(16)), 2, 2);
+			Pen.fill;
+		};
+	}
+
+	prTreeRowAt { |y| ^treeRows !? { |rows| rows[((y + treeScroll) / treeRowHeight).floor.asInteger] } }
+
+	prTreeClick { |v, y|
+		var row = this.prTreeRowAt(y);
+		if (row.isNil) { ^this };
+		if (row[\kind] == \folder) {
+			treeOpen[row[\id]] = row[\open].not;
+			this.prFillBrowser;
+		} {
+			lastRevealed = row[\address];		// it is under the pointer: no jump
+			this.select(row[\address]);
+			v.refresh;
+		};
+	}
+
+	// what the row under the pointer is, for the hint bar
+	prTreeHint { |y|
+		var row = this.prTreeRowAt(y), d, target, value, spec, units, map, kind;
+		if (row.isNil) {
+			^"everything that can be mapped now - click a heading to open or fold it, a target to show it, then learn on the right"
+		};
+		if (row[\kind] == \folder) {
+			^"%: % target%, % mapped - click to % it".format(row[\label], row[\count],
+				if (row[\count] == 1) { "" } { "s" }, row[\mapped], if (row[\open]) { "fold" } { "open" })
+		};
+		d = row[\desc];
+		target = MapperTarget(mapper, row[\address]);
+		kind = d[\kind] ? \knob;
+		spec = d[\spec] !? { |x| x.asSpec };
+		units = (spec !? { |x| x.units } ? "").asString;
+		value = try { target.value };
+		map = mapper.mapFor(row[\address]);
+		^"%  -  %%%%  -  %  -  %".format(
+			row[\full],
+			switch (kind, \toggle, { "a switch" }, \trigger, { "an action" }, \menu, { "a choice" }, { "a value" }),
+			if (kind == \knob and: { spec.notNil }) {
+				", % to %%".format(this.class.num(spec.minval), this.class.num(spec.maxval),
+					if (units.isEmpty) { "" } { " " ++ units })
+			} { "" },
+			if (kind != \trigger and: { value.isNumber }) { ", now %".format(this.class.num(value)) } { "" },
+			d[\hint] !? { |x| "  -  " ++ x } ? "",
+			target.asCode,
+			if (map.notNil) { "mapped to % %".format(map.ktl, map.element) } { "not mapped: click it, then learn" })
 	}
 
 	// ------------------------------------------------------------------ showing
