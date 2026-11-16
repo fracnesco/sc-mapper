@@ -1,0 +1,62 @@
+TITLE:: MapperWindow
+summary:: the mapper's window: controllers, targets, learn, every mapping
+categories:: Libraries>Mapper
+related:: Classes/Mapper, Classes/MapperMap
+
+DESCRIPTION::
+code::
+Mapper.default.gui;
+Mapper.default.gui.select([\tidal, \cut]);
+::
+
+On the left, everything that can be mapped now, provider by provider and group by group,
+narrowed by the menu and by what is typed in the field; a star marks the mapped ones. Pick a row
+and it is on show on the right.
+
+On the right, the controllers: strong::find:: lists the devices plugged in, strong::connect::
+listens to one under a name, strong::forget:: lets it go with its mappings. Then the mappings,
+by controller and element, so the targets of one control sit together - the second and later
+ones start with a plus. Under the list, the one on show: lo and hi in the target's own units,
+invert, takeover, the button mode and the curve, which is drawn by dragging its points.
+
+strong::midi learn:: switches the mapper's learn mode: click a fader, a knob or a switch in any
+window that follows it, move a control, and again until it is off. strong::learn:: maps the next
+element moved to the target on show; a control that already moves something keeps that as well.
+strong::+ tidal:: learns a Tidal control by name, strong::code...:: opens every mapping as code.
+
+The window keeps nothing: closing it changes no mapping.
+
+CLASSMETHODS::
+
+METHOD:: new
+ARGUMENT:: mapper
+a link::Classes/Mapper::. link::Classes/Mapper#-gui:: is the usual way in.
+
+METHOD:: windowBounds
+Where it opens; remembered when it closes.
+
+INSTANCEMETHODS::
+
+METHOD:: select
+Put a target on show, with its mapping if it has one. From any thread.
+
+METHOD:: selectedAddress
+
+METHOD:: selectedMap
+
+METHOD:: follow
+Whether a mapping moved on the controller comes on show.
+
+METHOD:: refresh
+
+METHOD:: find
+Look for controllers.
+
+METHOD:: openCode
+Every mapping as a document.
+
+METHOD:: isOpen
+
+METHOD:: front
+
+METHOD:: close

@@ -1,0 +1,79 @@
+TITLE:: MapperUnits
+summary:: a provider for effects that list their own parameters
+categories:: Libraries>Mapper
+related:: Classes/Mapper, Classes/MapperTarget
+
+DESCRIPTION::
+Holds things by name and makes each of their parameters a target,
+code::[\units, name, key]::. A thing qualifies when its class answers code::mapParams:: - a list
+of code::(key:, label:, kind:, spec:, section:):: - and it answers code::mapGet(key):: and
+code::mapSet(key, value)::. Every effect built on sc-eq's FxUnit does.
+
+code::
+~unit = (class: (mapParams: { [(key: \amount, label: "amount", spec: ControlSpec(0, 1))] },
+	mapParam: { |self, key| self.mapParams.detect { |e| e[\key] == key } }),
+	amount: 0.5, mapGet: { |self, key| self[key] }, mapSet: { |self, key, v| self[key] = v });
+Mapper.units.units.size;
+::
+
+With sc-eq installed:
+
+code::
+Mapper.units.put(\masterEq, \FxChain.asClass.master.eq);
+Mapper.default.map(\m1, \kn_1_1, [\units, \masterEq, \gain3]);
+Mapper.units.removeAt(\masterEq);
+::
+
+Anything else that holds effects - a mixer with inserts, a module with a chain per pad - is a
+provider of its own and uses link::#*describe:: for the descriptions, so they read the same
+everywhere. The provider does not own the units: freeing one is its owner's business, and a
+freed one should be taken off with link::#-removeAt::.
+
+CLASSMETHODS::
+
+METHOD:: new
+
+METHOD:: describe
+One parameter of one unit as a target description.
+ARGUMENT:: unit
+the effect
+ARGUMENT:: key
+one of its map params
+ARGUMENT:: name
+what the unit is called in labels
+ARGUMENT:: group
+where it sits in the window's list
+ARGUMENT:: path
+the path the description carries
+RETURNS:: an Event, or nil when the unit has no such parameter
+
+METHOD:: describeAll
+Every parameter of one unit.
+ARGUMENT:: unit
+the effect
+ARGUMENT:: name
+what it is called
+ARGUMENT:: group
+where it sits
+ARGUMENT:: pathOf
+a Function from a key to that parameter's path
+
+INSTANCEMETHODS::
+
+METHOD:: put
+Hold a unit under a name.
+
+METHOD:: removeAt
+
+METHOD:: at
+
+METHOD:: units
+The IdentityDictionary, name to unit.
+
+METHOD:: mapTargetAt
+
+METHOD:: mapTargets
+
+METHOD:: mapAddressOf
+
+METHOD:: mapLabel

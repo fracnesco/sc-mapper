@@ -1,0 +1,78 @@
+TITLE:: MapperMap
+summary:: one element of a controller moving one target
+categories:: Libraries>Mapper
+related:: Classes/Mapper, Classes/MapperTarget
+
+DESCRIPTION::
+What a mapping does. Made by link::Classes/Mapper#-map::, changed through its setters, and
+written out by link::#-asCode::.
+
+code::
+m = Mapper.default.map(\m1, \kn_1_1, [\tidal, \cut], 200, 4000);
+m.curve = \exp;
+m.takeover = \jump;
+m.out(0.5);
+m.asCode;
+::
+
+The element's 0..1 goes through the curve, then from code::lo:: to code::hi:: along the target's
+own warp. With code::\pickup:: nothing moves until the element reaches the value the target has
+- after the mapping is made, and after anything else moved the target.
+
+A button on an on/off target flips it (code::\toggle::) or holds it while down
+(code::\momentary::); on a trigger it fires; on anything else it flips between lo and hi or holds
+hi while down. A knob on an on/off target turns it on above the middle.
+
+INSTANCEMETHODS::
+
+METHOD:: lo
+Where the element's bottom sends the target, in the target's own units. Until one is set it is
+the bottom of the target's range, whatever that is when asked.
+
+METHOD:: hi
+The same for the top. Under lo turns the control round.
+
+METHOD:: curve
+code::\lin::, code::\exp::, code::\log::, code::\scurve::, a Number (lincurve's curve) or an Env
+from 0 to 1.
+
+METHOD:: invert
+
+METHOD:: takeover
+code::\pickup:: or code::\jump::.
+
+METHOD:: mode
+code::\toggle:: or code::\momentary::.
+
+METHOD:: target
+RETURNS:: its link::Classes/MapperTarget::
+
+METHOD:: ktl
+The controller's name.
+
+METHOD:: element
+The element's name.
+
+METHOD:: isWaiting
+Whether its target is not there now.
+
+METHOD:: isCaught
+Whether the element has picked the target up.
+
+METHOD:: shape
+0..1 through the curve.
+
+METHOD:: out
+Where 0..1 of the element sends the target, in its units.
+
+METHOD:: lastInput
+The element's last value.
+
+METHOD:: asCode
+The line that makes it again.
+ARGUMENT:: receiver
+what the line calls map on
+ARGUMENT:: address
+the target as that receiver names it
+
+METHOD:: label

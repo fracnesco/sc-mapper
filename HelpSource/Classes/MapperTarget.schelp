@@ -1,0 +1,89 @@
+TITLE:: MapperTarget
+summary:: something a controller can move, named by an address
+categories:: Libraries>Mapper
+related:: Classes/Mapper, Classes/MapperMap, Classes/MapperUnits
+
+DESCRIPTION::
+An address, code::[provider, ... path]::, and the mapper it belongs to. The target asks its
+provider what the path is now, so it follows what it names when that is rebuilt; when the
+provider is gone or has no such path it does not exist, and setting it does nothing.
+
+code::
+t = MapperTarget(Mapper.default, [\tidal, \cut]);
+t.exists;
+t.value = 0.4;
+t.label;
+::
+
+subsection:: Descriptions
+
+What a provider answers for a path - an Event:
+
+table::
+## code::label:: || what it is called
+## code::kind:: || code::\knob:: (the default), code::\toggle::, code::\trigger:: or code::\menu::
+## code::spec:: || the range a mapping's lo and hi live in, and its warp
+## code::get::, code::set:: || Functions, in the target's own units
+## code::trigger:: || what a trigger does; without it, set(1)
+## code::range:: || where a new mapping's lo and hi start, if not the whole spec
+## code::group:: || where it sits in the window's list
+## code::owner:: || something else that moves it: then it cannot be mapped
+## code::path:: || its path, in what code::mapTargets:: answers
+::
+
+CLASSMETHODS::
+
+METHOD:: new
+ARGUMENT:: mapper
+a link::Classes/Mapper::
+ARGUMENT:: address
+an Array, the provider's key first
+
+METHOD:: keep
+How long a description is trusted before the provider is asked again, in seconds.
+
+INSTANCEMETHODS::
+
+METHOD:: address
+
+METHOD:: providerKey
+
+METHOD:: path
+The address without the provider.
+
+METHOD:: provider
+
+METHOD:: exists
+Asks the provider now.
+
+METHOD:: resolve
+Ask the provider now.
+RETURNS:: the description, or nil
+
+METHOD:: desc
+The description, asked again when it is not fresh.
+
+METHOD:: kind
+
+METHOD:: isToggle
+
+METHOD:: isTrigger
+
+METHOD:: isMenu
+
+METHOD:: owner
+
+METHOD:: spec
+
+METHOD:: range
+
+METHOD:: value
+In the target's own units; nil when it does not exist.
+
+METHOD:: trigger
+
+METHOD:: label
+
+METHOD:: group
+
+METHOD:: asCode

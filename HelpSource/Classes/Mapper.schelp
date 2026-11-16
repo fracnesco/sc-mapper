@@ -1,0 +1,258 @@
+TITLE:: Mapper
+summary:: one controller mapper for every mixer, module and effect
+categories:: Libraries>Mapper
+related:: Classes/MapperMap, Classes/MapperTarget, Classes/MapperUnits, Classes/MapperWindow
+
+DESCRIPTION::
+A knob, fader or button of a controller on anything that says it can be moved - and on
+several things at once, each with a range of its own.
+
+code::
+m = Mapper.default;
+m.map(\m1, \kn_1_1, [\tidal, \bright], 0, 1);
+m.map(\m1, \kn_1_1, [\tidal, \cut], 200, 4000, \exp);
+m.code.postln;
+m.gui;
+::
+
+Controllers come through the Modality toolkit (code::MKtl::), looked up by name: without it
+there are no controllers, and a Tidal mapping still works, moved from code. The mapper depends
+on nothing else, and nothing it maps depends on it.
+
+subsection:: Targets
+
+A target is named by an address, code::[provider, ... path]::, that stays the same across
+rebuilds, reloads and sessions - see link::Classes/MapperTarget::. A mapping is between names:
+one whose target is not there strong::waits::, and starts working when it comes back; one whose
+controller is not there yet starts working when it is (looked at once a second).
+
+An element may move several targets. A target has one element: mapping it again replaces the
+mapping it had.
+
+subsection:: Providers
+
+Whoever has something to map registers under a key and answers two messages.
+
+table::
+## code::mapTargetAt(path):: || the description of one thing (an Event, see link::Classes/MapperTarget::), or nil
+## code::mapTargets:: || the descriptions of everything it has now, each with its code::path::
+## code::mapAddressOf(unit, key):: || optional: the path of a parameter of an effect it holds, so a knob in that effect's window can be learnt
+## code::mapsSavedElsewhere:: || optional: true when its own sessions save its mappings, so the mapper's file leaves them out
+## code::mapLabel:: || optional: what the window calls it
+::
+
+It says code::changed(\mapTargets):: when what it has changes. The mapper brings two providers
+of its own: code::\tidal:: (code::[\tidal, name]:: is Tidal's cF "name") and code::\units::, a
+link::Classes/MapperUnits::.
+
+code::
+(
+~level = 0.5;
+~provider = (
+	mapTargetAt: { |self, path|
+		if (path[0] == \level) {
+			(path: [\level], label: "my level", spec: ControlSpec(0, 1),
+				get: { ~level }, set: { |v| ~level = v })
+		}
+	},
+	mapTargets: { |self| [self.mapTargetAt([\level])] }
+);
+Mapper.register(\mine, ~provider);
+Mapper.default.targets.collect(_.address);
+);
+::
+
+subsection:: Saving
+
+The code is the storage. link::#*default:: reads link::#*defaultPath:: the first time it is asked
+for and writes it a moment after a mapping changes, unless link::#*autoSave:: is false. The
+mapper is never freed by cmd-period or a server reboot: it has nothing on the server.
+
+CLASSMETHODS::
+
+METHOD:: default
+The mapper everything shares. Made, and its file read, the first time it is asked for.
+RETURNS:: a link::Classes/Mapper::
+
+METHOD:: new
+A mapper of its own, with no file: for a test, or a set of mappings kept apart.
+
+METHOD:: register
+Put a provider on the shared mapper.
+ARGUMENT:: key
+a Symbol, the first item of its targets' addresses
+ARGUMENT:: provider
+anything that answers code::mapTargetAt:: and code::mapTargets::
+
+METHOD:: unregister
+Take a provider off the shared mapper. Its mappings stay, and wait.
+
+METHOD:: units
+The shared mapper's link::Classes/MapperUnits::.
+
+METHOD:: isAvailable
+Whether the Modality toolkit is installed.
+
+METHOD:: defaultPath
+The file link::#*default:: reads and writes.
+
+METHOD:: autoLoad
+Whether link::#*default:: reads its file when it is made.
+
+METHOD:: autoSave
+Whether it writes it by itself.
+
+METHOD:: tidalPort
+Where Tidal listens for controls, 6010.
+
+METHOD:: codeOf
+A value as you would type it.
+
+INSTANCEMETHODS::
+
+METHOD:: map
+Map an element of a controller to a target.
+ARGUMENT:: ktl
+the MKtl's name
+ARGUMENT:: element
+the element's name in its description (code::\kn_1_1::); a note pair goes by its group's
+ARGUMENT:: address
+the target's
+ARGUMENT:: lo
+where the control's bottom sends it, in the target's own units; nil for the bottom of its range
+ARGUMENT:: hi
+the same for the top
+ARGUMENT:: curve
+code::\lin::, code::\exp::, code::\log::, code::\scurve::, a Number or an Env
+ARGUMENT:: invert
+turn the control round
+ARGUMENT:: takeover
+code::\pickup:: or code::\jump::
+ARGUMENT:: mode
+a button's: code::\toggle:: or code::\momentary::
+RETURNS:: the link::Classes/MapperMap::, or nil when something else owns the target
+
+METHOD:: unmap
+Take away the mapping of a target.
+
+METHOD:: unmapElement
+Take away every mapping of an element.
+
+METHOD:: remove
+Take away one link::Classes/MapperMap::.
+
+METHOD:: clear
+Every mapping and every controller name.
+
+METHOD:: clearProvider
+The mappings of one provider only.
+
+METHOD:: mapFor
+RETURNS:: the link::Classes/MapperMap:: of a target, or nil
+
+METHOD:: mapsOf
+RETURNS:: the maps of an element
+
+METHOD:: mapsOfProvider
+RETURNS:: the maps onto one provider's targets
+
+METHOD:: maps
+Every mapping, a List of link::Classes/MapperMap::.
+
+METHOD:: learn
+The next element moved on any controller is mapped to this address: a knob as soon as it moves,
+a button when pressed.
+ARGUMENT:: address
+the target's
+ARGUMENT:: action
+a Function given the new link::Classes/MapperMap::
+
+METHOD:: cancelLearn
+Stop waiting.
+
+METHOD:: isLearning
+
+METHOD:: armed
+The link::Classes/MapperTarget:: waiting for a controller, or nil.
+
+METHOD:: learnMode
+While it is on, a click on anything that can be mapped arms it, in every window that follows the
+mapper's code::\learnMode::.
+
+METHOD:: register
+Put a provider on this mapper.
+
+METHOD:: unregister
+
+METHOD:: providers
+An IdentityDictionary, key to provider.
+
+METHOD:: units
+Its link::Classes/MapperUnits::.
+
+METHOD:: targets
+Everything that can be mapped now.
+RETURNS:: an Array of link::Classes/MapperTarget::
+
+METHOD:: addressOf
+The address of a parameter of an effect some provider holds, or nil.
+
+METHOD:: useKtl
+Take mappings from an MKtl, making it from the description when there is none of that name.
+
+METHOD:: forgetKtl
+Stop listening to an MKtl. Its mappings go; the MKtl stays.
+
+METHOD:: findDevices
+Modality's MKtl.find.
+RETURNS:: the devices seen
+
+METHOD:: devices
+The devices of the last find, an Event each.
+
+METHOD:: connect
+A found device on the mapper.
+
+METHOD:: ktls
+The controllers' names and descriptions.
+
+METHOD:: ktl
+The MKtl of a name.
+
+METHOD:: ktlState
+code::\connected::, code::\virtual:: or code::\missing::.
+
+METHOD:: isButton
+Whether an element is a button; nil when the controller is not there to ask.
+
+METHOD:: sendTidal
+Set a Tidal control.
+
+METHOD:: tidalValues
+What has been sent, by name.
+
+METHOD:: code
+The mappings as code that makes them again.
+ARGUMENT:: all
+true: also those a provider's own sessions save
+
+METHOD:: save
+Write the code to a file; its own link::#-path:: when none is given.
+
+METHOD:: load
+A file of mappings in place of the ones there are. A file that is not there clears them.
+
+METHOD:: loadCode
+Run mappings given as text.
+
+METHOD:: path
+Where it saves by itself, if anywhere.
+
+METHOD:: gui
+RETURNS:: its link::Classes/MapperWindow::
+
+METHOD:: refreshFeedback
+The LEDs of buttons on on/off targets, again.
+
+METHOD:: free
+Stop listening to every controller and provider.
