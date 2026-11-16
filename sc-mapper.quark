@@ -1,0 +1,11 @@
+(
+	name: "Mapper",
+	summary: "Controllers on anything: one mapper for every module, effect and mixer - one control to many targets, each with its own range",
+	version: "0.1.0",
+	author: "Francesco Corvi",
+	url: "https://github.com/fracnesco/sc-mapper.git",
+	license: "MIT",
+	copyright: "Copyright (c) 2026 Francesco Corvi",
+	schelp: "HelpSource",
+	dependencies: []
+)

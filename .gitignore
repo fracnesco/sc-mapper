@@ -1,0 +1,8 @@
+.DS_Store
+
+# local working notes, not for the repository
+ECOSYSTEM.md
+CLAUDE.md
+
+# UI snapshots and mock-ups, made while working on the window
+ui-shots/
