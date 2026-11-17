@@ -12,10 +12,7 @@ m.map(\m1, \kn_1_1, [\tidal, \bright]);                // the same knob, Tidal's
 m.gui;                                                 // controllers, targets, learn, every mapping
 ```
 
-![the mapper's window: a Midimix with eight mappings on an eq and a compressor of the main out and on two Tidal controls, the eq's second band on show with its exp curve](ui-shots/mapper-window.png)
-
-The pictures in this README live in `ui-shots/`, which the repository ignores: make them on
-your machine with the window open, or read them on the author's.
+![the mapper's window: a Midimix with eight mappings on an eq and a compressor of the main out and on two Tidal controls, the eq's second band on show with its exp curve](images/mapper-window.png)
 
 It depends on nothing. Everything it works with is looked up by name, and a tool that is not
 installed is a button or a target that is not there.
@@ -136,7 +133,7 @@ element**: mapping a target again replaces the mapping it had.
 
 ## The window
 
-![the window with the targets folded away: a Tidal control on show, its curve drawn by hand with three segments](ui-shots/mapper-drawn-curve.png)
+![the window with the targets folded away: a Tidal control on show, its curve drawn by hand with three segments](images/mapper-drawn-curve.png)
 
 `Mapper.default.gui`. On the left, every target there is, as a tree: a provider, its groups, the
 targets in each. Click a heading to fold or open it (**+** and **-** do them all), type to
