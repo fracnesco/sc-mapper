@@ -687,7 +687,8 @@ Mapper {
 	// ---------------------------------------------------------------------------
 
 	free {
-		window !? { |w| w.close }; window = nil;
+		// the window is Qt: closed on AppClock, so free works from a routine too
+		window !? { |w| { w.close }.defer }; window = nil;
 		poller !? { poller.stop; poller = nil };
 		listeners.keys.copy.do { |n| this.prRelease(n) };
 		providers.do { |p| p.removeDependant(this) };
