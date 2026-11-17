@@ -12,16 +12,30 @@ m.map(\m1, \kn_1_1, [\tidal, \bright]);                // the same knob, Tidal's
 m.gui;                                                 // controllers, targets, learn, every mapping
 ```
 
-![the mapper's window](images/mapper.png)
+![the mapper's window: a Midimix with eight mappings on an eq and a compressor of the main out and on two Tidal controls, the eq's second band on show with its exp curve](ui-shots/mapper-window.png)
 
-It depends on nothing. Controllers come through the
-[Modality toolkit](https://github.com/ModalityTeam/Modality-toolkit), looked up by name: without
-it there are no controllers, and Tidal mappings still work, moved from code. With
-[sc-fx-kit](https://github.com/fracnesco/sc-fx-kit) installed, the knobs of every effect window can be
-learnt by clicking them, and wear a dot while they are mapped.
+The pictures in this README live in `ui-shots/`, which the repository ignores: make them on
+your machine with the window open, or read them on the author's.
+
+It depends on nothing. Everything it works with is looked up by name, and a tool that is not
+installed is a button or a target that is not there.
 
 Nothing that is mapped needs the mapper to compile either. A mixer, a module or a chain of
 effects registers with it when it is there, and works the same when it is not.
+
+## How it connects to the other tools
+
+| tool | what the mapper does with it |
+|------|------------------------------|
+| [Modality toolkit](https://github.com/ModalityTeam/Modality-toolkit) | the controllers: `MKtl`, its descriptions, find and connect. Without it there are no controllers, and Tidal mappings still work, moved from code |
+| [sc-fx-kit](https://github.com/fracnesco/sc-fx-kit) | every effect built on its `FxUnit` lists its parameters, so it can be put on the mapper by name (`\units`). Its knobs, in every effect window, are learnt by clicking them and wear a dot while they are mapped |
+| [sc-EQ](https://github.com/fracnesco/sc-EQ) | `ParaEQ`, an `FxUnit`: its bands, cuts and switches are targets |
+| [TidalCycles](https://tidalcycles.org) | `[\tidal, name]` is Tidal's `cF 0 "name"`, sent to its controller port, 6010 |
+| [adaptive-textures](https://github.com/fracnesco/adaptive-textures) | registers every engine as `\AdaptiveTextures`: parameters, switches, the selected voice, snapshots, both effect chains (its `engine-controls` branch) |
+| [superdirt-gui](https://github.com/fracnesco/superdirt-gui) | registers as `\sdg`: the orbit faders and every insert. This is on a branch of SuperDirtGUI that is not published yet |
+
+It started as SuperDirtGUI's MIDI mapping (`SDGMidi`), taken out so that nothing it maps has to
+be SuperDirtGUI.
 
 Written for SuperCollider 3.13 on macOS.
 
@@ -121,6 +135,8 @@ element**: mapping a target again replaces the mapping it had.
 - A target that something else moves (it has an `owner`) refuses a mapping.
 
 ## The window
+
+![the window with the targets folded away: a Tidal control on show, its curve drawn by hand with three segments](ui-shots/mapper-drawn-curve.png)
 
 `Mapper.default.gui`. On the left, every target there is, as a tree: a provider, its groups, the
 targets in each. Click a heading to fold or open it (**+** and **-** do them all), type to
