@@ -17,7 +17,7 @@ m.gui;                                                 // controllers, targets, 
 It depends on nothing. Controllers come through the
 [Modality toolkit](https://github.com/ModalityTeam/Modality-toolkit), looked up by name: without
 it there are no controllers, and Tidal mappings still work, moved from code. With
-[sc-eq](https://github.com/fracnesco/sc-eq) installed, the knobs of every effect window can be
+[sc-fx-kit](https://github.com/fracnesco/sc-fx-kit) installed, the knobs of every effect window can be
 learnt by clicking them, and wear a dot while they are mapped.
 
 Nothing that is mapped needs the mapper to compile either. A mixer, a module or a chain of
@@ -90,7 +90,7 @@ mappings are between names, so nothing is lost when what they name is rebuilt.
 ### Effects by name
 
 Anything whose class answers `mapParams` and that answers `mapGet(key)` and `mapSet(key,
-value)` - every effect built on sc-eq's `FxUnit` does - can be put on the mapper under a name:
+value)` - every effect built on sc-fx-kit's `FxUnit` does - can be put on the mapper under a name:
 
 ```supercollider
 Mapper.units.put(\masterEq, FxChain.master.eq);
